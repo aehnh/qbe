@@ -520,11 +520,12 @@ amd64_emitfn(Fn *fn, FILE *f)
 		fprintf(f, ".globl %s%s\n", gassym, fn->name);
 	fprintf(f,
 		"%s%s:\n"
+		"\tpushq $0x0\n"
 		"\tpushq %%rbp\n"
 		"\tmovq %%rsp, %%rbp\n",
 		gassym, fn->name
 	);
-	fs = framesz(fn);
+	fs = framesz(fn) + 8;
 	if (fs)
 		fprintf(f, "\tsub $%"PRIu64", %%rsp\n", fs);
 	if (fn->vararg) {
@@ -562,7 +563,19 @@ amd64_emitfn(Fn *fn, FILE *f)
 				}
 			fprintf(f,
 				"\tleave\n"
+				"\tpopq %%r8\n"
+				"\tcmpq $0x0, %%r8\n"
+				"\tjne canary_fail\n"
 				"\tret\n"
+				"canary_fail:\n"
+				"\tmovq $error_message, %%rdi\n"
+				"\tcall printf\n"
+				"\tmovq $60, %%rax\n"
+				"\txor %%rdi, %%rdi\n"
+				"\tsyscall\n"
+				".data\n"
+				"error_message:\n"
+    			"\t.asciz \"Stack corruption detected! Terminating program.\\n\"\n"
 			);
 			break;
 		case Jjmp:
