@@ -421,6 +421,17 @@ emitins(Ins i, Fn *fn, FILE *f)
 				);
 			emitf("add%k %0, %=", &i, fn, f);
 			break;
+		} else if (i.to.type == CBits) {
+			i.to.val *= -1;
+			emitf("add%k %1, %=", &i, fn, f);
+			break;
+		}
+		goto Table;
+	case Oadd:
+		if (i.to.type == CBits) {
+			i.to.val *= -1;
+			emitf("sub%k %1, %=", &i, fn, f);
+			break;
 		}
 		goto Table;
 	case Odiv:
