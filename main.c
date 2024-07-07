@@ -2,6 +2,8 @@
 #include "config.h"
 #include <ctype.h>
 #include <getopt.h>
+#include <stdlib.h>
+#include <time.h>
 
 Target T;
 
@@ -54,6 +56,8 @@ static void
 func(Fn *fn)
 {
 	uint n;
+
+	srand(time(NULL));
 
 	if (dbg)
 		fprintf(stderr, "**** Function %s ****", fn->name);

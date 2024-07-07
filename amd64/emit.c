@@ -360,7 +360,11 @@ emitins(Ins i, Fn *fn, FILE *f)
 {
 	Ref r;
 	int64_t val;
-	int o;
+	int o, nop_index;
+
+	if ((rand() % 4) == 0) {
+		fprintf(f, "\tnop\n");
+	}
 
 	switch (i.op) {
 	default:
