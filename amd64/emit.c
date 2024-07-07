@@ -569,17 +569,9 @@ amd64_emitfn(Fn *fn, FILE *f)
 				"\tleave\n"
 				"\tpopq %%r8\n"
 				"\tcmpq $0x0, %%r8\n"
-				"\tjne canary_fail\n"
-				"\tret\n"
-				"canary_fail:\n"
-				"\tmovq $error_message, %%rdi\n"
-				"\tcall printf\n"
-				"\tmovq $60, %%rax\n"
-				"\txor %%rdi, %%rdi\n"
-				"\tsyscall\n"
-				".data\n"
-				"error_message:\n"
-    			"\t.asciz \"Stack corruption detected! Terminating program.\\n\"\n"
+				"\tjne canary_fail_%s\n"
+				"\tret\n",
+				fn->name
 			);
 			break;
 		case Jjmp:
@@ -606,5 +598,21 @@ amd64_emitfn(Fn *fn, FILE *f)
 			die("unhandled jump %d", b->jmp.type);
 		}
 	}
+
+	fprintf(f,
+		"canary_fail_%s:\n"
+		"\tmovq $error_message_%s, %%rdi\n"
+		"\tcall printf\n"
+		"\tmovq $60, %%rax\n"
+		"\txor %%rdi, %%rdi\n"
+		"\tsyscall\n"
+		".data\n"
+		"error_message_%s:\n"
+		"\t.asciz \"Stack corruption detected! Terminating program.\\n\"\n",
+		fn->name,
+		fn->name,
+		fn->name
+	);
+
 	id0 += fn->nblk;
 }
