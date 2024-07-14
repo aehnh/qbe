@@ -40,6 +40,38 @@ char debug['Z'+1] = {
 static FILE *outf;
 static int dbg;
 
+typedef struct {
+	char *buffer;
+	size_t size;
+} Buffer;
+
+typedef struct {
+	Buffer *buffers;
+	size_t size;
+	size_t capacity;
+} BufferArray;
+
+BufferArray *arr;
+
+void buffer_array_init() {
+	arr = emalloc(sizeof(BufferArray));
+	arr->buffers = emalloc(10 * sizeof(Buffer));
+	arr->size = 0;
+	arr->capacity = 10;
+}
+
+void buffer_array_add(char *buffer, size_t size) {
+	if (arr->size >= arr->capacity) {
+		arr->capacity *= 2;
+		arr->buffers = realloc(arr->buffers, arr->capacity * sizeof(Buffer));
+		if (!arr->buffers)
+			die("realloc, out of memory");
+	}
+	arr->buffers[arr->size].buffer = buffer;
+	arr->buffers[arr->size].size = size;
+	arr->size++;
+}
+
 static void
 data(Dat *d)
 {
@@ -56,8 +88,10 @@ static void
 func(Fn *fn)
 {
 	uint n;
-
-	srand(time(NULL));
+	char *buffer;
+	size_t size;
+	FILE *temp;
+	int i;
 
 	if (dbg)
 		fprintf(stderr, "**** Function %s ****", fn->name);
@@ -101,8 +135,25 @@ func(Fn *fn)
 		} else
 			fn->rpo[n]->link = fn->rpo[n+1];
 	if (!dbg) {
-		T.emitfn(fn, outf);
-		fprintf(outf, "/* end function %s */\n\n", fn->name);
+		temp = tmpfile();
+		if (!temp) {
+			die("tmpfile failed");
+		}
+		T.emitfn(fn, temp);
+		fprintf(temp, "/* end function %s */\n\n", fn->name);
+
+		rewind(temp);
+        fseek(temp, 0, SEEK_END);
+        size_t temp_size = ftell(temp);
+        rewind(temp);
+        char *buffer = emalloc(temp_size);
+        size_t read_size = fread(buffer, 1, temp_size, temp);
+        if (read_size != temp_size) {
+			die("fread failed");
+		}
+		/*fwrite(buffer, 1, temp_size, outf);*/
+		fclose(temp);
+		buffer_array_add(buffer, temp_size);
 	} else
 		fprintf(stderr, "\n");
 	freeall();
@@ -115,6 +166,9 @@ main(int ac, char *av[])
 	FILE *inf, *hf;
 	char *f, *sep;
 	int c, asm;
+	int i, j, t, idx;
+
+	srand(time(NULL));
 
 	asm = Defasm;
 	T = Deftgt;
@@ -181,6 +235,8 @@ main(int ac, char *av[])
 		break;
 	}
 
+	buffer_array_init();
+
 	do {
 		f = av[optind];
 		if (!f || strcmp(f, "-") == 0) {
@@ -195,6 +251,27 @@ main(int ac, char *av[])
 		}
 		parse(inf, f, data, func);
 	} while (++optind < ac);
+
+	int *indices = emalloc(arr->size * sizeof(int));
+	for (i = 0; i < arr->size; i++) {
+        indices[i] = i;
+    }
+	if (arr->size > 1) {
+        for (i = 0; i < arr->size - 1; i++) {
+            j = i + rand() / (RAND_MAX / (arr->size - i) + 1);
+            t = indices[j];
+            indices[j] = indices[i];
+            indices[i] = t;
+        }
+    }
+
+	for (i = 0; i < arr->size; i++) {
+		idx = indices[i];
+		fwrite(arr->buffers[idx].buffer, sizeof(char), arr->buffers[idx].size, outf);
+		free(arr->buffers[idx].buffer);
+	}
+	free(arr->buffers);
+	free(arr);
 
 	if (!dbg)
 		gasemitfin(outf);
