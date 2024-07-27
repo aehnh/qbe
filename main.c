@@ -235,6 +235,40 @@ main(int ac, char *av[])
 		break;
 	}
 
+	fprintf(outf,
+		".section .bss\n"
+		".align 64\n"
+		".lcomm dummy_array, 65536\n"
+		"\n"
+		".text\n"
+		".global dummy_load\n"
+		"\n"
+		"dummy_load:\n"
+		"\tpushq %%rdi\n"
+    	"\tpushq %%rsi\n"
+    	"\tpushq %%rdx\n"
+		"\tpushq %%rax\n"
+		"\tpushq %%rcx\n"
+		"\tpushq %%r8\n"
+		"\tmovq $65536, %%rdi\n"
+    	"\tcall get_random_index\n"
+		"\tmovq dummy_array(,%%rax,8), %%r8\n"
+		"\tpopq %%r8\n"
+		"\tpopq %%rcx\n"
+		"\tpopq %%rax\n"
+		"\tpopq %%rdx\n"
+		"\tpopq %%rsi\n"
+		"\tpopq %%rdi\n"
+		"\tret\n"
+		"\n"
+		"get_random_index:\n"
+		"\trdtsc\n"
+		"\tshr $6, %%rax\n"
+		"\tand $8191, %%rax\n"
+		"\tret\n"
+		"\n"
+	);
+
 	buffer_array_init();
 
 	do {

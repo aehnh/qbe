@@ -366,6 +366,12 @@ emitins(Ins i, Fn *fn, FILE *f)
 		fprintf(f, "\tnop\n");
 	}
 
+	if (i.op == Oload || i.op == Oloadsw || i.op == Oloaduw || i.op == Oloadsh || i.op == Oloaduh || i.op == Oloadsb || i.op == Oloadub) {
+		if ((rand() % 2) == 0) {
+			fprintf(f, "\tcall dummy_load\n");
+		}
+	}
+
 	switch (i.op) {
 	default:
 	Table:
